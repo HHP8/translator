@@ -24,6 +24,6 @@ for (const required of ['LICENSE', 'README.md', 'CHANGELOG.md', 'THIRD_PARTY_NOT
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'app/package.json'), 'utf8'));
 const lock = JSON.parse(fs.readFileSync(path.join(root, 'app/package-lock.json'), 'utf8'));
-if (pkg.version !== '0.1.0' || lock.version !== pkg.version || lock.packages[''].version !== pkg.version || pkg.license !== 'MIT') failures.push('Version/license metadata mismatch');
+if (pkg.version !== '0.1.1' || lock.version !== pkg.version || lock.packages[''].version !== pkg.version || pkg.license !== 'MIT') failures.push('Version/license metadata mismatch');
 if (failures.length) { console.error(failures.join('\n')); process.exitCode = 1; }
 else console.log(`Public-source preflight passed: ${names.length} files, version ${pkg.version}, MIT, no detected private material.`);

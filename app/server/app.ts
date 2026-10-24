@@ -14,14 +14,16 @@ export function createApp(provider: Provider, port = 5173, staticRoot?: string) 
     if (!host || ![`127.0.0.1:${port}`,`localhost:${port}`].includes(host)) { res.status(403).json({ error:'Invalid local host.' }); return; }
     res.setHeader('X-Content-Type-Options','nosniff'); res.setHeader('Referrer-Policy','no-referrer');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.openai.com; frame-src 'self' blob:; object-src 'self' blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
-    if (req.path.startsWith('/api/')) {
-      res.setHeader('Cache-Control','no-store');
-      const origin = req.headers.origin;
-      if ((origin && !origins.has(origin)) || (req.method !== 'GET' && !origin) || req.headers['sec-fetch-site'] === 'cross-site') { res.status(403).json({ error:'This API accepts same-origin local requests only.' }); return; }
-    }
     next();
   });
-  app.use(express.json({ limit:'1mb' }));
+  // Mount security checks through the same router matching as the protected API.
+  app.use('/api', (req, res, next) => {
+    res.setHeader('Cache-Control','no-store');
+    const origin = req.headers.origin;
+    if ((origin && !origins.has(origin)) || (req.method !== 'GET' && !origin) || req.headers['sec-fetch-site'] === 'cross-site') { res.status(403).json({ error:'This API accepts same-origin local requests only.' }); return; }
+    next();
+  });
+  app.use(express.json({ limit:'1mb', inflate:false }));
   const upload = multer({ storage:multer.memoryStorage(), limits:{ fileSize:25*1024*1024, files:1, fields:8, fieldSize:1024*1024, parts:10 } });
   app.get('/api/health', (_req,res) => res.json({ configured:provider.configured, mock:provider.mock, name:'Translator' }));
   let modelCache: { expires:number; ids:string[] } | null = null;
@@ -40,7 +42,7 @@ export function createApp(provider: Provider, port = 5173, staticRoot?: string) 
       if (!provider.configured) throw new AppError('not_configured','OpenAI is not configured. Check Settings.',503);
       const options = parseOptions(req.body);
       if (modelCache && !modelCache.ids.includes(options.model)) throw new AppError('model_access','The selected model is not listed for your project. Choose another model explicitly.',403);
-      const input = await prepareInput(typeof req.body.text === 'string' ? req.body.text : undefined, req.file, req.body.mode);
+      const input = await prepareInput(typeof req.body.text === 'string' ? req.body.text : undefined, req.file, req.body.mode, controller.signal);
       if (controller.signal.aborted) return;
       res.status(200).set({ 'Content-Type':'text/event-stream; charset=utf-8', 'Cache-Control':'no-store', 'Connection':'keep-alive', 'X-Accel-Buffering':'no' }); res.flushHeaders(); started = true;
       send({ type:'start', total:input.chunks.length, source:input.source, warnings:input.warnings });
@@ -79,6 +81,9 @@ export function createApp(provider: Provider, port = 5173, staticRoot?: string) 
   if (staticRoot) { app.use(express.static(staticRoot)); app.get('/{*path}',(_req,res)=>res.sendFile(path.join(staticRoot,'index.html'))); }
   app.use((error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{
     if(res.headersSent){res.end();return;}
+    if (typeof error === 'object' && error !== null && 'type' in error && error.type === 'encoding.unsupported') {
+      res.status(415).json({error:'Compressed JSON request bodies are not supported.',code:'unsupported_encoding'}); return;
+    }
     const safe = error instanceof multer.MulterError ? new AppError('upload_limit','The upload exceeds its size or field limits. Choose a smaller file.',413) : safeError(error);
     res.status(safe.status).json({error:safe.message,code:safe.code});
   });
