@@ -1,0 +1,58 @@
+{
+  "name": "translator-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build --configLoader native && node scripts/prepare-sites-build.mjs",
+    "start": "node --import tsx server/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --configLoader native",
+    "preview": "vite preview",
+    "test:sites": "node --test tests/sites-worker.test.mjs",
+    "release:check": "node scripts/release-check.mjs"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@vitejs/plugin-react": "5.0.4",
+    "docx": "^9.10.0",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "mammoth": "^1.13.0",
+    "marked": "^18.1.0",
+    "multer": "^2.4.0",
+    "openai": "^7.32.0",
+    "pdf-lib": "^1.17.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2",
+    "vite": "6.4.2",
+    "yauzl": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/turndown": "^5.0.6",
+    "@types/yauzl": "^3.4.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "license": "MIT",
+  "description": "A local translation workspace for text, live voice, documents, and images.",
+  "repository": {
+    "type": "git",
+    "directory": "app",
+    "url": "https://github.com/HHP8/translator.git"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  }
+}
